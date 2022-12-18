@@ -9,7 +9,7 @@ class Programa:
         layout = [
             [sg.Text("Serviço", size=7), sg.Input(key="servico", size=30)],
             [sg.Text("Usuário", size=7), sg.Input(key="usuario", size=30)],
-            [sg.Text("Senha", size=7), sg.Input(key="senha", size=20, password_char="*"), sg.Button("Ver", visible=False)],
+            [sg.Text("Senha", size=7), sg.Input(key="senha", size=30, password_char="*"), sg.Button("Ver", visible=False)],
             [sg.Button("Consulta"), sg.Button("Lista"), sg.Button("Limpar"),
              sg.Button("Cadastrar"), sg.Button("Atualizar", visible=False), sg.Button("Deletar", visible=False)]
         ]
@@ -36,7 +36,8 @@ class Programa:
             elif event == "Limpar":
                 self.Limpar()
             elif event == "Ver":
-                senha_desc = self.g.descriptografar(bytes(self.values["senha"].encode("utf-8")))
+                print(self.values["senha"])
+                senha_desc = self.g.ver_senha(self.values["servico"],self.values["usuario"])
                 sg.Popup(f"Senha: {senha_desc}")
             elif event == "Lista":
                 try:

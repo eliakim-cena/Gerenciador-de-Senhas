@@ -7,15 +7,14 @@ class Gerenciador:
         self.cursor = self.conn.cursor()
         self.base = "services"
         self.op = ""
-        self.chave = ""
+        self.chave = self.ler_chave()
         self.conectar()
-        self.ler_chave()
     def logar(self, usuario, senha):
         self.cursor.execute(f"SELECT * FROM {self.base} WHERE service = "
                             "'Gerenciador' AND username = ?", (usuario,))
         for service in self.cursor.fetchall():
             senha_desc = str(self.descriptografar(service[2]))
-            senha_desc =  senha_desc.replace("b'","").replace("'","")
+            senha_desc =  senha_desc.replace("b'", "").replace("'", "")
             if senha == senha_desc:
                 print("logou")
                 return True
@@ -39,6 +38,7 @@ class Gerenciador:
 
     def inserir(self, servico, usuario, senha):
         senha = self.criptografar(senha)
+        print(senha)
         self.cursor.execute(f""" 
             INSERT INTO {self.base}
             VALUES  ( ?, ?, ?);""", (servico, usuario, senha))
@@ -61,6 +61,13 @@ class Gerenciador:
     def listar(self):
         self.cursor.execute(f"SELECT service, username, password FROM services;")
 
+    def ver_senha(self, servico ,usuario):
+        self.cursor.execute(f"SELECT * FROM {self.base} WHERE service = "
+                            "? AND username = ?", (servico, usuario))
+        for service in self.cursor.fetchall():
+            senha = str(self.descriptografar(service[2])).replace("b", "").replace("'", "")
+            return senha
+
     def gera_chave(self):
         self.chave = Fernet.generate_key()
         with open("encrypt.key", "wb") as key:
@@ -69,7 +76,7 @@ class Gerenciador:
     def ler_chave(self):
         try:
             with open("encrypt.key", "rb") as key:
-                self.chave = key.read()
+                return key.read()
         except:
             self.gera_chave()
 
@@ -81,5 +88,3 @@ class Gerenciador:
         return Fernet(self.chave).decrypt(senha.decode("utf-8"))
 
 g = Gerenciador()
-
-#g.inserir("Gerenciador", "teste", "cena")
