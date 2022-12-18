@@ -1,4 +1,4 @@
-# AccessManager
+# Gerenciador de Senhas
  Projeto de um Gerenciador de Acesso criado em Python, onde pode ser cadastrados dados de acessos a sites e sistemas para ser recuperado quando necessário lembrar os dados de acesso. 
  
 Neste projeto foram Usadas as biblioteca PySimpleGUI para criação de Interface e a Sqlite3 para uso de um arquivo de banco de dados. 
