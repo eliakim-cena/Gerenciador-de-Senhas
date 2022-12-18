@@ -5,6 +5,7 @@ import PySimpleGUI as sg
 class Programa:
     def __init__(self):
         self.g = Gerenciador()
+
         layout = [
             [sg.Text("Serviço", size=7), sg.Input(key="servico", size=30)],
             [sg.Text("Usuário", size=7), sg.Input(key="usuario", size=30)],
@@ -35,7 +36,7 @@ class Programa:
             elif event == "Limpar":
                 self.Limpar()
             elif event == "Ver":
-                senha_desc = self.g.processa_criptografia(self.values["senha"], -7)
+                senha_desc = self.g.descriptografar(bytes(self.values["senha"].encode("utf-8")))
                 sg.Popup(f"Senha: {senha_desc}")
             elif event == "Lista":
                 try:
@@ -51,7 +52,7 @@ class Programa:
                 except:
                     pass
             elif event == "Atualizar":
-                self.Salvar(2,self.values["servico"], self.values["usuario"], self.values["senha"])
+                self.Salvar(2, self.values["servico"], self.values["usuario"], self.values["senha"])
                 self.Limpar()
             elif event == "Deletar":
                 self.Deletar(self.values["servico"], self.values["usuario"])

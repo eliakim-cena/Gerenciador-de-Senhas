@@ -9,12 +9,11 @@ class Login:
             [sg.Text("Senha", size=13), sg.Input(key="senha", size=30, password_char="*")]
         ]
         self.gerenciador = Gerenciador()
-        self.gerenciador.conectar(self.gerenciador.base)
         if self.gerenciador.ver_acesso() == False:
             layout.append([sg.Text("Confirme a Senha", key="lconfirma"), sg.Input(key="csenha", password_char="*", size=30)])
             layout.append([sg.Button("Cadastrar")])
         else:
-            layout.append([sg.Button("Logar")])
+            layout.append([sg.Button("Logar", enable_events=True)])
         self.janela = sg.Window("Gerenciador de Senhas", layout=layout)
         while True:
             event, values = self.janela.read()

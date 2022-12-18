@@ -1,27 +1,31 @@
 import sqlite3
-
+from cryptography.fernet import Fernet
 class Gerenciador:
     def __init__(self):
         self.base_dados = "base.db"
         self.conn = sqlite3.connect(database=self.base_dados)
         self.cursor = self.conn.cursor()
-        self.n = 128
         self.base = "services"
         self.op = ""
-
+        self.chave = ""
+        self.conectar()
+        self.ler_chave()
     def logar(self, usuario, senha):
-        senha_decritp = self.processa_criptografia(senha, 7)
         self.cursor.execute(f"SELECT * FROM {self.base} WHERE service = "
-                            "'Gerenciador' AND username = ? AND password = ?", (usuario, senha_decritp))
+                            "'Gerenciador' AND username = ?", (usuario,))
         for service in self.cursor.fetchall():
-            if service:
+            senha_desc = str(self.descriptografar(service[2]))
+            senha_desc =  senha_desc.replace("b'","").replace("'","")
+            if senha == senha_desc:
+                print("logou")
                 return True
             else:
+                print("Erro")
                 return False
 
-    def conectar(self, base):
+    def conectar(self):
         self.cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS {base}(
+        CREATE TABLE IF NOT EXISTS {self.base}(
             service TEXT NOT NULL,
             username TEXT NOT NULL,
             password TEXT NOT NULL);""")
@@ -34,14 +38,14 @@ class Gerenciador:
             return True
 
     def inserir(self, servico, usuario, senha):
-        senha = self.processa_criptografia(senha, 7)
+        senha = self.criptografar(senha)
         self.cursor.execute(f""" 
             INSERT INTO {self.base}
             VALUES  ( ?, ?, ?);""", (servico, usuario, senha))
         self.conn.commit()
 
     def atualiza(self, servico, usuario, senha):
-        senha = self.processa_criptografia(senha, 7)
+        senha = self.criptografar(senha)
         self.cursor.execute(f"""
             UPDATE {self.base} SET password = ? WHERE service = ? AND username = ?;""", (senha, servico, usuario))
         self.conn.commit()
@@ -52,14 +56,30 @@ class Gerenciador:
         self.conn.commit()
 
     def consulta(self, servico):
-        self.cursor.execute(f"SELECT * FROM services WHERE service = ?;", servico)
+        self.cursor.execute(f"SELECT * FROM services WHERE service = ?", (servico,))
 
     def listar(self):
         self.cursor.execute(f"SELECT service, username, password FROM services;")
 
-    def processa_criptografia(self, dados, chave):
-        novo_dado = ""
-        for letra in dados:
-             novo_dado = novo_dado + chr((ord(letra) + chave) % self.n)
-        return novo_dado
+    def gera_chave(self):
+        self.chave = Fernet.generate_key()
+        with open("encrypt.key", "wb") as key:
+            key.write(self.chave)
 
+    def ler_chave(self):
+        try:
+            with open("encrypt.key", "rb") as key:
+                self.chave = key.read()
+        except:
+            self.gera_chave()
+
+    def criptografar(self, senha):
+        return Fernet(self.chave).encrypt(bytes(senha.encode("utf-8")))
+
+    def descriptografar(self, senha):
+        print("chave = " + str(self.chave))
+        return Fernet(self.chave).decrypt(senha.decode("utf-8"))
+
+g = Gerenciador()
+
+#g.inserir("Gerenciador", "teste", "cena")
