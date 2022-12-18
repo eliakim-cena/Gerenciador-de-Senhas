@@ -22,7 +22,7 @@ class Programa:
                 self.Limpar()
             elif event == "Consulta":
                 servico = sg.PopupGetText("Informe o serviço que deseja consultar")
-                self.g.consulta(servico, False)
+                self.g.consulta(servico)
                 self.janela["Cadastrar"].update(visible=False)
                 self.janela["Atualizar"].update(visible=True)
                 self.janela["Deletar"].update(visible=True)
