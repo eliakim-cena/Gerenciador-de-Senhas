@@ -1,91 +1,111 @@
 import sqlite3
+from cryptography.fernet import Fernet
 
 class Gerenciador:
     def __init__(self):
         self.base_dados = "base.db"
         self.conn = sqlite3.connect(database=self.base_dados)
         self.cursor = self.conn.cursor()
-        self.n = 128
         self.base = "services"
         self.op = ""
+        self.chave = self.ler_chave()
+        self.conectar()
 
     def logar(self, usuario, senha):
-        self.cursor.execute(f"""
-                    SELECT * FROM {self.base} WHERE service = 'Gerenciador' AND username = '{usuario}';""")
+        self.cursor.execute(f"SELECT * FROM {self.base} WHERE service = "
+                            "'Gerenciador' AND username = ?", (usuario,))
         for service in self.cursor.fetchall():
-            senha_decritp = self.processa_criptografia(service[2], -7)
-            if senha_decritp == senha:
-                self.menu_principal()
+            senha_desc = str(self.descriptografar(service[2]))
+            senha_desc = senha_desc.replace("b'", "").replace("'", "")
+            if senha == senha_desc:
+                return True
             else:
-                print("*** Informações de acesso incorretas     ***")
-                self.menu_login()
+                return False
 
-    def conectar(self, base):
+    def conectar(self):
         self.cursor.execute(f"""
-        CREATE TABLE IF NOT EXISTS {base}(
+        CREATE TABLE IF NOT EXISTS {self.base}(
             service TEXT NOT NULL,
             username TEXT NOT NULL,
             password TEXT NOT NULL);""")
 
     def ver_acesso(self):
-        self.cursor.execute(f"""
-                    SELECT * FROM {self.base} WHERE service = 'Gerenciador';""")
+        self.cursor.execute(f"SELECT * FROM {self.base} WHERE service = 'Gerenciador'")
         if not self.cursor.fetchall():
-            s = False
-            print("**********************************************")
-            print("*    Bem vindo ao Gerenciador de Senhas      *")
-            print("**********************************************")
-            print("* No momento não existe um usuário Gerenciador")
-            print("* Por favor cadastrar um usuário e senha agora")
-            print("**********************************************")
-            while s == False:
-                usuario = input("         Usuário: ")
-                senha = input("          Senha: ")
-                senha2 = input("Confirme a senha: ")
-                if senha == senha2:
-                    senha = self.processa_criptografia(senha, 7)
-                    self.inserir("Gerenciador", usuario, senha)
-                    s = True
-                else:
-                    print("Senhas Informadas não são iguais")
+            return False
+        else:
+            return True
 
     def inserir(self, servico, usuario, senha):
+        print(senha)
+        senha = self.criptografar(senha)
         self.cursor.execute(f""" 
             INSERT INTO {self.base}
-            VALUES  ('{servico}','{usuario}','{senha}');""")
+            VALUES  ( ?, ?, ?);""", (servico, usuario, senha))
         self.conn.commit()
 
     def atualiza(self, servico, usuario, senha):
+        senha = self.criptografar(senha)
         self.cursor.execute(f"""
-            UPDATE {self.base} SET password = '{senha}' WHERE service = '{servico}' AND username = 
-            '{usuario}';""")
+            UPDATE {self.base} SET password = ? WHERE service = ? AND username = ?;""", (senha, servico, usuario))
         self.conn.commit()
 
     def delete(self, servico, usuario):
         self.cursor.execute(f"""
-            DELETE FROM {self.base} WHERE service = '{servico}' AND username = '{usuario}';""")
+            DELETE FROM {self.base} WHERE service = ? AND username = ?;""", (servico, usuario))
         self.conn.commit()
 
-    def consulta(self, servico, descript):
-        self.cursor.execute(f"""
-            SELECT * FROM {self.base} WHERE service = '{servico}';""")
-        for service in self.cursor.fetchall():
-                if descript == True:
-                    senha = self.processa_criptografia(service[2], -7)
-                    print(f" Serviço: {service[0]} Usuário: {service[1]} Senha: {senha}")
-                else:
-                    print(f" Serviço: {service[0]} Usuário: {service[1]} Senha: {service[2]}")
+    def consulta(self, servico):
+        self.cursor.execute(f"SELECT * FROM services WHERE service = ?", (servico,))
 
     def listar(self):
-        self.cursor.execute(f"""SELECT service, username FROM {self.base};""")
-        for service in self.cursor.fetchall():
-            print(f" Serviço: {service[0]} Usuário: {service[1]}")
+        self.cursor.execute(f"SELECT service, username, password FROM services;")
+        lista = self.cursor.fetchall()
+        for l in lista:
+            print("Serviço: " + l[0], "Usuário: " + l [1], "Senha: " + str(l[2]))
 
-    def processa_criptografia(self, dados, chave):
-        novo_dado = ""
-        for letra in dados:
-             novo_dado = novo_dado + chr((ord(letra) + chave) % self.n)
-        return novo_dado
+    def ver_senha(self, servico, usuario):
+        self.cursor.execute(f"SELECT * FROM {self.base} WHERE service = "
+                            "? AND username = ?", (servico, usuario))
+        for service in self.cursor.fetchall():
+            senha = str(self.descriptografar(service[2])).replace("b", "").replace("'", "")
+            return senha
+
+    def gera_chave(self):
+        self.chave = Fernet.generate_key()
+        with open("encrypt.key", "wb") as key:
+            key.write(self.chave)
+
+    def ler_chave(self):
+        try:
+            with open("encrypt.key", "rb") as key:
+                return key.read()
+        except:
+            self.gera_chave()
+
+    def criptografar(self, senha):
+        return Fernet(self.chave).encrypt(bytes(senha.encode("utf-8")))
+
+    def descriptografar(self, senha):
+        return Fernet(self.chave).decrypt(senha.decode("utf-8"))
+    def menu_criar_acesso(self):
+        print("**********************************************")
+        print("*    Bem vindo ao Gerenciador de Senhas      *")
+        print("**********************************************")
+        print("* No momento não existe um usuário Gerenciador")
+        print("* Por favor cadastrar um usuário e senha agora")
+        print("**********************************************")
+        s = False
+        while s == False:
+            usuario = input("         Usuário: ")
+            senha = input("          Senha: ")
+            senha2 = input("Confirme a senha: ")
+            if senha == senha2:
+                self.inserir("Gerenciador", usuario, senha)
+                self.menu_principal()
+                s = True
+            else:
+                print("Senhas Informadas não são iguais")
 
     def menu(sel1f):
         print("**************************************************")
@@ -102,12 +122,11 @@ class Gerenciador:
         username = input("Informe o usuário ou e-mail de acesso: ")
         password = input("Informe a senha para o serviço: ")
         if self.op == "1":
-            password = self.processa_criptografia(password, 7)
             self.inserir(service, username, password)
+            print("Registro efetuado")
         elif self.op == "4":
-            password = self.processa_criptografia(password, 7)
             self.atualiza(service, username, password)
-
+            print("Registro salvo")
     def menu_login(self):
         print("******************************************************************")
         print("*             Bem vindo ao Gerenciador de senhas                 *")
@@ -115,8 +134,11 @@ class Gerenciador:
         print("*             Informe abaixo os dados para acesso ao sistema     *")
         login = input("* Usuário:  ")
         senha = input("*   Senha:  ")
-        self.logar(login, senha)
-
+        if self.logar(login, senha) == True:
+            self.menu_principal()
+        else:
+            print("Dados de acesso incorretos")
+            self.menu_login()
     def menu_principal(self):
         while True:
             self.menu()
@@ -127,24 +149,19 @@ class Gerenciador:
                 self.listar()
             elif self.op == "3":
                 servico = input("Informe qual o serviço que deseja verificar: ")
-                descript = input("Descriptografada? S/N: ")
-                if descript.upper() == "S":
-                    self.consulta(servico, True)
-                else:
-                    self.consulta(servico, False)
+                usuario = input("Informe qual o usuario do servico:")
+                retorno = self.ver_senha(servico, usuario)
+                print("Senha descriptografada: " + retorno)
             elif self.op == "5":
                 servico = input("Informe qual o serviço que deseja remover: ")
                 usuario = input("informe qual o usuário do serviço: ")
                 self.delete(servico, usuario)
+                print("Registro excluido")
             elif self.op.upper() == "S":
                 self.menu_login()
-            elif self.op == "666":
-                self.base = "secret"
-            elif self.op == "0":
-                self.base = "services"
+
 gerenciador = Gerenciador()
-gerenciador.conectar(gerenciador.base)
-#gerenciador.ver_acesso()
-#gerenciador.menu_login()
-gerenciador.menu_principal()
-gerenciador.conn.close()
+if gerenciador.ver_acesso() == False:
+    gerenciador.menu_criar_acesso()
+else:
+    gerenciador.menu_login()
